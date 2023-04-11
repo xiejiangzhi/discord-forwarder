@@ -1,8 +1,21 @@
 const config = require('./config');
-const Discord = require('discord.js');
-const request = require('request');
+const { Client, GatewayIntentBits, Partials } = require('discord.js');
+const https = require('https');
+const url = require('url');
 
-const client = new Discord.Client();
+const user_config = require(config.CONFIG_FILE);
+console.log("Start discord forwarder");
+console.log(user_config);
+
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.DirectMessages,
+    GatewayIntentBits.MessageContent
+  ],
+  partials: [ Partials.Channel ],
+});
 
 client.on('ready', () => {
   console.info('logged in as ' + client.user.tag);
@@ -30,34 +43,51 @@ client.on('disconnect', message => {
   process.exit(1);
 });
 
-client.on('message', message => {
-  if (config.READING_CHANNELS.includes(message.channel.id)) {
-    let content = message.content;
-    message.attachments.forEach(attachment => {
-      content += '\n' + attachment.proxyURL;
-    });
+function process_msg(message) {
+  let content = message.content;
+  for (var i = 0; i< user_config.rules.length; i++) {
+    let rule = user_config.rules[i];
+    if (!content.startsWith(rule.prefix)) {
+      continue;
+    }
 
-    config.WRITING_CHANNELS.forEach(channel => {
-      client.channels.get(channel).send(content, {embed: message.embeds[0]}).catch(err => {
-        console.error(err);
-      });
-    });
+    if (message.content == 'ping') {
+      message.channel.send('pong');
+    }
 
-    config.WEBHOOKS.forEach(webhook => {
-      request({
-        url: webhook,
-        method: 'POST',
-        json: {
-          content: content,
-          embeds: message.embeds,
-        },
-      }, err => {
-        if (err) {
-          console.error(err);
-        }
-      });
+    console.log('call webhook ' + rule.webhook);
+    let opts = url.parse(rule.webhook);
+    opts.method = 'POST'
+    opts.headers = {
+      'Content-Type': 'application/json'
+    }
+    let req = https.request(opts, (res) => {
+      let body = '';
+      res.on('data', chunk => { body = body + chunk });
+      res.on('end', () => {
+        console.log('recv webhook ' + res.statusCode);
+        if (res.statusCode != 200) { return; }
+        console.log(body);
+        let reply = JSON.parse(body);
+        console.log(reply);
+        message.channel.send(reply.content, reply.opts).catch(err => { })
+      })
     });
+    req.on('error', err => {
+      console.error(err);
+    });
+    req.write(JSON.stringify({ "content": content }));
+    req.end();
+    return;
   }
+}
+
+client.on('messageCreate', message => {
+  if (message.author.bot) { return; }
+  if (user_config.rules.length <= 0) { return; }
+  console.log('received msg ' + message.content);
+  process_msg(message);
 });
 
 client.login(config.TOKEN);
+

@@ -1,0 +1,8 @@
+{
+  "rules": [
+    {
+      "prefix": "ping",
+      "webhook": "https://n.xjz.pw/webhook-test/b01352d7-bde3-46b3-8f3a-fe630d0c7"
+    }
+  ]
+}
