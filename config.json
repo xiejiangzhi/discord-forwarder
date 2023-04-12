@@ -2,8 +2,10 @@
   "rules": [
     {
       "prefix": "ping",
-      "channel_id": null,
       "server_id": null,
+      "channel_id": null,
+      "channel_type": null,
+      "user_id": null,
       "webhook": "https://xxxx.com/webhook/xxx"
     }
   ]

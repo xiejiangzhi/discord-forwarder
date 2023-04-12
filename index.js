@@ -48,8 +48,10 @@ function process_msg(message) {
   for (var i = 0; i< user_config.rules.length; i++) {
     let rule = user_config.rules[i];
     if (
-      (rule.server_id && rule.server_id != message.guild.id)
+      (rule.server_id && (!message.guild || rule.server_id != message.guild.id))
       || (rule.channel_id && rule.channel_id != message.channel.id)
+      || (rule.user_id && rule.user_id != message.author.id)
+      || (rule.channel_type && rule.channel_type != message.channel.type)
       || !content.startsWith(rule.prefix)
     ) {
       continue;
@@ -69,7 +71,7 @@ function process_msg(message) {
         if (res.statusCode != 200) { return; }
         console.log('recv webhook body ' + body);
         let reply = JSON.parse(body);
-        message.channel.send(reply.content, reply.opts).catch(err => { })
+        message.channel.send(reply.content).catch(err => { })
       })
     });
     req.on('error', err => {
@@ -81,11 +83,18 @@ function process_msg(message) {
   }
 }
 
-client.on('messageCreate', message => {
-  if (message.author.bot) { return; }
+client.on('messageCreate', msg => {
+  if (msg.author.bot) { return; }
   if (user_config.rules.length <= 0) { return; }
-  console.log('received msg ' + message.content);
-  process_msg(message);
+
+  console.log(
+    `recv msg[user:${msg.author.id},`
+    + `server:${msg.guild ? msg.guild.id : ''},`
+    + `channel:${msg.channel.type}#${msg.channel.id}]: `
+    + msg.content
+  );
+
+  process_msg(msg);
 });
 
 client.login(config.TOKEN);
