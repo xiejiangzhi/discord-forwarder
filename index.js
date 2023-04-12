@@ -2,10 +2,9 @@ const config = require('./config');
 const { Client, GatewayIntentBits, Partials } = require('discord.js');
 const https = require('https');
 const url = require('url');
+const Rule = require('./rule');
 
-const user_config = require(config.CONFIG_FILE);
 console.log("Start discord forwarder");
-console.log(user_config);
 
 const client = new Client({
   intents: [
@@ -44,19 +43,7 @@ client.on('disconnect', message => {
 });
 
 async function process_msg(message) {
-  let content = message.content;
-  for (var i = 0; i< user_config.rules.length; i++) {
-    let rule = user_config.rules[i];
-    if (
-      (rule.server_id && (!message.guild || rule.server_id != message.guild.id))
-      || (rule.channel_id && rule.channel_id != message.channel.id)
-      || (rule.user_id && rule.user_id != message.author.id)
-      || (rule.channel_type && rule.channel_type != message.channel.type)
-      || !content.startsWith(rule.prefix)
-    ) {
-      continue;
-    }
-
+  Rule.find_rule(message, (rule, content) => {
     console.log('call webhook ' + rule.webhook);
     let opts = url.parse(rule.webhook);
     opts.method = 'POST'
@@ -83,16 +70,15 @@ async function process_msg(message) {
       channel_id: message.channel.id,
       channel_type: message.channel.type,
       server_id: message.guild ? message.guild.id : null,
-      content: content.slice(rule.prefix.length)
+      content: content
     }));
     req.end();
     return;
-  }
+  });
 }
 
 client.on('messageCreate', msg => {
   if (msg.author.bot) { return; }
-  if (user_config.rules.length <= 0) { return; }
 
   console.log(
     `recv msg[user:${msg.author.id},`
