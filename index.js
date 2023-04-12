@@ -77,7 +77,14 @@ async function process_msg(message) {
     req.on('error', err => {
       console.error(err);
     });
-    req.write(JSON.stringify({ "content": content.slice(rule.prefix.length) }));
+    req.write(JSON.stringify({
+      id: message.id,
+      user_id: message.author.id,
+      channel_id: message.channel.id,
+      channel_type: message.channel.type,
+      server_id: message.guild ? message.guild.id : null,
+      content: content.slice(rule.prefix.length)
+    }));
     req.end();
     return;
   }

@@ -16,9 +16,9 @@ client.on('error', err => {
 function discord_send(channel_id, msg) {
   client.channels.get(channel_id).send(msg).catch(err => { });
 }
-// client.login(config.TOKEN);
+client.login(config.TOKEN);
 
-const host = '127.0.0.1'
+const host = '0.0.0.0'
 const port = config.LISTEN_PORT;
 if (!(port && port > 0)) {
   console.log("Invalid port " + port);
