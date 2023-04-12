@@ -43,7 +43,7 @@ client.on('disconnect', message => {
   process.exit(1);
 });
 
-function process_msg(message) {
+async function process_msg(message) {
   let content = message.content;
   for (var i = 0; i< user_config.rules.length; i++) {
     let rule = user_config.rules[i];
@@ -71,13 +71,13 @@ function process_msg(message) {
         if (res.statusCode != 200) { return; }
         console.log('recv webhook body ' + body);
         let reply = JSON.parse(body);
-        message.channel.send(reply.content).catch(err => { })
+        message.channel.send(reply).catch(err => { })
       })
     });
     req.on('error', err => {
       console.error(err);
     });
-    req.write(JSON.stringify({ "content": content }));
+    req.write(JSON.stringify({ "content": content.slice(rule.prefix.length) }));
     req.end();
     return;
   }
