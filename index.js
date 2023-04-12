@@ -47,12 +47,12 @@ function process_msg(message) {
   let content = message.content;
   for (var i = 0; i< user_config.rules.length; i++) {
     let rule = user_config.rules[i];
-    if (!content.startsWith(rule.prefix)) {
+    if (
+      (rule.server_id && rule.server_id != message.guild.id)
+      || (rule.channel_id && rule.channel_id != message.channel.id)
+      || !content.startsWith(rule.prefix)
+    ) {
       continue;
-    }
-
-    if (message.content == 'ping') {
-      message.channel.send('pong');
     }
 
     console.log('call webhook ' + rule.webhook);
@@ -62,14 +62,13 @@ function process_msg(message) {
       'Content-Type': 'application/json'
     }
     let req = https.request(opts, (res) => {
+      console.log('recv webhook ' + res.statusCode);
       let body = '';
       res.on('data', chunk => { body = body + chunk });
       res.on('end', () => {
-        console.log('recv webhook ' + res.statusCode);
         if (res.statusCode != 200) { return; }
-        console.log(body);
+        console.log('recv webhook body ' + body);
         let reply = JSON.parse(body);
-        console.log(reply);
         message.channel.send(reply.content, reply.opts).catch(err => { })
       })
     });
